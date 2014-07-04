@@ -22,6 +22,7 @@
 # along with swapspace; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+. /etc/rc.d/init.d/functions
 . /lib/lsb/init-functions
 
 set -e
@@ -38,38 +39,41 @@ PARANOID="no"
 test -x "$DAEMON" || exit 0
 
 PIDOPT="--pidfile $PIDFILE"
-#DAEMON_ARGS="--daemon $PIDOPT"
-DAEMON_ARGS="-d -p"
-STDOPTS="--quiet $PIDOPT"
+DAEMON_ARGS="-d -p -q"
 
 if test "$PARANOID" = "yes" ; then
 	DAEMON_ARGS = "$DAEMON_ARGS -P"
 fi
 
-STARTCMD="daemon $PIDOPT $DAEMON -p"
-STOPCMD="killproc -p `cat $PIDFILE`"
-
-
-case "$1" in
-  start)
+start() {
   	echo -n "Starting $DESC: $NAME"
-	$STARTCMD
-	echo .
-	;;
-  stop)
+	start_daemon $DAEMON $DAEMON_ARGS
+	echo_success
+    echo
+}
+
+stop() {
 	echo -n "Stopping $DESC: $NAME"
-	$STOPCMD
+	killproc -p $PIDFILE
 	if test "$PARANOID" = "yes" ; then
 		# Make an extra attempt to clean up any remaining swapfiles
 		$DAEMON $DAEMON_ARGS -e
 	fi
-	echo .
+	echo_success
+    echo
+}
+
+case "$1" in
+  start)
+    start
+	;;
+  stop)
+    stop
 	;;
   reload|restart|force-reload)
-	echo -n "Restarting $DESC: $NAME"
-	$STOPCMD
+    stop
 	sleep 1
-	$STARTCMD
+    start
 	echo .
 	;;
   *)
